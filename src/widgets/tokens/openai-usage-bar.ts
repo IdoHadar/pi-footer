@@ -2,12 +2,12 @@ import { defineWidget } from "../types.js";
 
 const MODES = {
   default: { label: "Default bar", width: 32, filled: "█", bracketed: true, showUsage: true },
-  short: { label: "Short bar", width: 10, filled: "▓", bracketed: false, showUsage: true },
+  short: { label: "Short bar", width: 10, filled: "▓", bracketed: true, showUsage: true },
   "short-only": {
     label: "Short bar only",
     width: 10,
     filled: "▓",
-    bracketed: false,
+    bracketed: true,
     showUsage: false,
   },
   medium: { label: "Medium bar", width: 16, filled: "█", bracketed: true, showUsage: true },
@@ -54,7 +54,7 @@ export const OpenAIUsageBarWidget = defineWidget({
       },
     },
   ],
-  icons: { emoji: "OpenAI", nerd: "OpenAI", text: "OpenAI" },
+  icons: { emoji: "Usage", nerd: "Usage", text: "Usage" },
   defaultStyle: { fg: "blue", bg: "default", bold: false },
   render({ ctx, options, renderWidget }) {
     const usageWindow =
@@ -69,8 +69,6 @@ export const OpenAIUsageBarWidget = defineWidget({
     const filled = Math.round((window.leftPercent / 100) * mode.width);
     const meter = `${mode.filled.repeat(filled)}${"░".repeat(mode.width - filled)}`;
     const bar = mode.bracketed ? `[${meter}]` : meter;
-    return renderWidget(
-      mode.showUsage ? `${bar} ${usageWindow} ${Math.round(window.leftPercent)}% left` : bar,
-    );
+    return renderWidget(mode.showUsage ? `${bar} ${Math.round(window.leftPercent)}%` : bar);
   },
 });

@@ -193,7 +193,7 @@ The **Value example** column shows the widget value before labels/icons and colo
 | `Context %` | Used context percentage. | Conditional colors. | `25%` |
 | `Context Remaining` | Remaining context percentage. | Conditional colors. | `75%` |
 | `Context Bar` | Progress bar plus context usage. | Display: default, short, short-only, medium; token format; conditional colors. | `[████████░░░░░░░░░░░░░░░░░░░░░░░░] 50k/200k (25%)` |
-| `OpenAI Usage Bar` | OpenAI subscription allowance left, not context capacity or API credit. | Window: available, 5h, weekly; display: default, short, short-only, medium. | `▓▓▓▓▓▓▓░░░ 5h 73% left` |
+| `OpenAI Usage Bar` | OpenAI subscription allowance left, not context capacity or API credit. | Window: available, 5h, weekly; display: default, short, short-only, medium. | `[▓▓▓▓▓▓▓░░░] 73%` |
 | `Session Cost` | Estimated session cost. | Cost format, show subscription marker. | `$0.1234` |
 | `Input Speed` | Average input tokens per minute across transcript span. | Token format, hide when zero. | `20.1k/min` |
 | `Output Speed` | Average output tokens per minute across transcript span. | Token format, hide when zero. | `1.1k/min` |

@@ -28,21 +28,17 @@ function ctx(
 
 describe("OpenAI Usage Bar", () => {
   it.each([
-    [
-      "default",
-      "[████████░░░░░░░░░░░░░░░░░░░░░░░░] 5h 25% left",
-      "[████████████████░░░░░░░░░░░░░░░░] weekly 50% left",
-    ],
-    ["short", "▓▓▓░░░░░░░ 5h 25% left", "▓▓▓▓▓░░░░░ weekly 50% left"],
-    ["short-only", "▓▓▓░░░░░░░", "▓▓▓▓▓░░░░░"],
-    ["medium", "[████░░░░░░░░░░░░] 5h 25% left", "[████████░░░░░░░░] weekly 50% left"],
+    ["default", "[████████░░░░░░░░░░░░░░░░░░░░░░░░] 25%", "[████████████████░░░░░░░░░░░░░░░░] 50%"],
+    ["short", "[▓▓▓░░░░░░░] 25%", "[▓▓▓▓▓░░░░░] 50%"],
+    ["short-only", "[▓▓▓░░░░░░░]", "[▓▓▓▓▓░░░░░]"],
+    ["medium", "[████░░░░░░░░░░░░] 25%", "[████████░░░░░░░░] 50%"],
   ])("fills remaining allowance in %s mode for both windows", (display, fiveHour, weekly) => {
     expect(widget({ raw: true, display, usageWindow: "5h" }).render(ctx())).toBe(fiveHour);
     expect(widget({ raw: true, display, usageWindow: "weekly" }).render(ctx())).toBe(weekly);
   });
 
   it("defaults to the available window, preferring 5h when both are present", () => {
-    expect(widget({ raw: true, display: "short" }).render(ctx())).toBe("▓▓▓░░░░░░░ 5h 25% left");
+    expect(widget({ raw: true, display: "short" }).render(ctx())).toBe("[▓▓▓░░░░░░░] 25%");
     expect(
       widget({ display: "short" }).render(
         ctx({
@@ -51,7 +47,7 @@ describe("OpenAI Usage Bar", () => {
           },
         }),
       ),
-    ).toBe("OpenAI ▓▓▓▓▓▓▓▓▓▓ weekly 97% left");
+    ).toBe("Usage [▓▓▓▓▓▓▓▓▓▓] 97%");
   });
 
   it("hides unknown and explicitly unavailable windows instead of showing a full bar", () => {
@@ -87,13 +83,15 @@ describe("OpenAI Usage Bar", () => {
           },
         }),
       ),
-    ).toBe("OpenAI ░░░░░░░░░░ 5h 0% left");
+    ).toBe("Usage [░░░░░░░░░░] 0%");
   });
 
   it.each(["emoji", "nerd", "text"] as const)(
-    "labels the subscription as OpenAI in %s mode",
+    "labels the subscription as Usage in %s mode",
     (iconMode) => {
-      expect(widget({ display: "short-only" }).render(ctx({ iconMode }))).toBe("OpenAI ▓▓▓░░░░░░░");
+      expect(widget({ display: "short-only" }).render(ctx({ iconMode }))).toBe(
+        "Usage [▓▓▓░░░░░░░]",
+      );
     },
   );
 

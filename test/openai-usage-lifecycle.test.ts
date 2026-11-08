@@ -155,7 +155,7 @@ describe("OpenAI allowance footer lifecycle", () => {
     await vi.advanceTimersByTimeAsync(0);
     expect(app.fetch).toHaveBeenCalledTimes(1);
     expect(app.redraw).toHaveBeenCalled();
-    expect(app.current()?.render(100)).toEqual(["OpenAI ▓▓▓▓▓▓▓▓▓▓ weekly 97% left"]);
+    expect(app.current()?.render(100)).toEqual(["Usage [▓▓▓▓▓▓▓▓▓▓] 97%"]);
     app.current()?.render(100);
     expect(app.fetch).toHaveBeenCalledTimes(1);
     await vi.advanceTimersByTimeAsync(60_000);
@@ -186,7 +186,7 @@ describe("OpenAI allowance footer lifecycle", () => {
     await app.emit("model_select");
     oldFooter?.dispose();
     await vi.advanceTimersByTimeAsync(0);
-    expect(app.current()?.render(100)).toEqual(["OpenAI ▓▓▓▓▓▓▓▓▓▓ weekly 97% left"]);
+    expect(app.current()?.render(100)).toEqual(["Usage [▓▓▓▓▓▓▓▓▓▓] 97%"]);
     await vi.advanceTimersByTimeAsync(60_000);
     expect(app.fetch).toHaveBeenCalledTimes(3);
   });
