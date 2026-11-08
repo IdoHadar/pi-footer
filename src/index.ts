@@ -21,6 +21,7 @@ import {
 } from "./extension-statuses.js";
 import { EMPTY_GIT_INFO, getGitInfo, hasEnabledGitWidgets, loadGitInfo } from "./git.js";
 import { collectSessionMetrics, collectTurnMetrics } from "./metrics.js";
+import { hasEnabledOpenAIUsageWidget, OpenAIUsageMonitor } from "./openai-usage.js";
 import { renderStatuslines } from "./render.js";
 import { isRecord, type GitInfo, type StatuslineConfig, type StatuslineData } from "./types.js";
 import { openStatuslineConfigUi } from "./ui.js";
@@ -35,12 +36,14 @@ export default async function statuslineExtension(pi: ExtensionAPI): Promise<voi
   let config = await loadConfig();
   let widgetStore = WidgetStore.fromConfig(config);
   const eventWidgets = new EventWidgetValues();
+  const usage = new OpenAIUsageMonitor();
   let liveTextVerbosity: string | undefined;
   let renderCurrentFooter: (() => void) | undefined;
   let getExtensionStatuses = (): ReadonlyMap<string, string> => EMPTY_EXTENSION_STATUSES;
 
   function apply(ctx: ExtensionContext | ExtensionCommandContext): void {
     if (!ctx.hasUI || !config.enabled) {
+      usage.stop();
       ctx.ui.setFooter(undefined);
       ctx.ui.setStatus(STATUS_KEY, undefined);
       return;
@@ -49,13 +52,22 @@ export default async function statuslineExtension(pi: ExtensionAPI): Promise<voi
     ctx.ui.setStatus(STATUS_KEY, ctx.ui.theme.fg("accent", "pi-footer"));
     ctx.ui.setFooter((tui, theme, footerData) => {
       getExtensionStatuses = () => footerData.getExtensionStatuses();
-      renderCurrentFooter = () => tui.requestRender();
+      const requestRender = () => tui.requestRender();
+      renderCurrentFooter = requestRender;
+      const releaseUsage = usage.bind({
+        enabled: hasEnabledOpenAIUsageWidget(config),
+        ctx,
+        changed: requestRender,
+      });
       const unsubscribeBranch = footerData.onBranchChange(() => tui.requestRender());
       return {
         dispose(): void {
           unsubscribeBranch();
-          if (renderCurrentFooter) renderCurrentFooter = undefined;
-          getExtensionStatuses = () => EMPTY_EXTENSION_STATUSES;
+          releaseUsage();
+          if (renderCurrentFooter === requestRender) {
+            renderCurrentFooter = undefined;
+            getExtensionStatuses = () => EMPTY_EXTENSION_STATUSES;
+          }
         },
         invalidate(): void {},
         render(width: number): string[] {
@@ -63,6 +75,7 @@ export default async function statuslineExtension(pi: ExtensionAPI): Promise<voi
             config,
             requestRender: () => tui.requestRender(),
             textVerbosity: liveTextVerbosity,
+            openAIUsage: usage.snapshot(),
           });
           const lines = renderStatuslines(widgetStore, data, width, {
             getExtensionStatuses,
@@ -137,6 +150,7 @@ export default async function statuslineExtension(pi: ExtensionAPI): Promise<voi
           collectGit: true,
           git: await loadGitInfo(pi, ctx.cwd, "main"),
           textVerbosity: liveTextVerbosity,
+          openAIUsage: usage.snapshot(),
         },
       );
       const result = await openStatuslineConfigUi(
@@ -168,6 +182,7 @@ export default async function statuslineExtension(pi: ExtensionAPI): Promise<voi
   });
 
   pi.on("session_shutdown", (_event, ctx) => {
+    usage.stop();
     ctx.ui.setFooter(undefined);
     ctx.ui.setStatus(STATUS_KEY, undefined);
   });
@@ -184,6 +199,7 @@ function collectStatuslineData(
     requestRender?: () => void;
     git?: GitInfo;
     textVerbosity?: string | undefined;
+    openAIUsage?: StatuslineData["openAIUsage"];
   } = {},
 ): StatuslineData {
   const contextUsage = ctx.getContextUsage();
@@ -206,6 +222,7 @@ function collectStatuslineData(
     usingSubscription: ctx.model ? ctx.modelRegistry.isUsingOAuth(ctx.model) : false,
     contextTokens: contextUsage?.tokens ?? undefined,
     contextMaxTokens: contextUsage?.contextWindow,
+    openAIUsage: options.openAIUsage,
     metrics: collectSessionMetrics(ctx.sessionManager.getBranch()),
     turnMetrics: collectTurnMetrics(ctx.sessionManager.getEntries()),
     eventWidgets,

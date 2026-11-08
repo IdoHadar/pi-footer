@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
 import { createHydratedWidgetForTest } from "./helpers/widgets.js";
+import { taggedPiTheme } from "./helpers/theme.js";
+import { normalizeConfig } from "../src/config.js";
+import { colorFields } from "../src/ui/fields.js";
+import { registry } from "../src/widgets/registry.js";
 import {
   applyColorDigit,
   applyColorOptionField,
@@ -125,6 +129,78 @@ describe("color option editing", () => {
     expect(lines[0]?.[1]?.options.warningFg).toBe("default");
     expect(lines[0]?.[1]?.options.dangerBg).toBe("default");
     expect(hasCustomAnsiColors(lines)).toBe(false);
+  });
+
+  it.each([
+    "context",
+    "context-length",
+    "context-remaining",
+    "context-bar",
+    "openai-usage-bar",
+  ] as const)("preserves the conditional editor field list for %s", (type) => {
+    const toggle =
+      type === "openai-usage-bar" ? "usageConditionalColors" : "contextConditionalColors";
+    const base = ["fg", "bg", "bold", "fgAnsi", "bgAnsi"];
+    const conditional = [
+      "warningFg",
+      "warningBg",
+      "warningFgAnsi",
+      "warningBgAnsi",
+      "dangerFg",
+      "dangerBg",
+      "dangerFgAnsi",
+      "dangerBgAnsi",
+    ];
+    expect(colorFields(createHydratedWidgetForTest(type)).map(({ id }) => id)).toEqual(base);
+    expect(
+      colorFields(createHydratedWidgetForTest(type, { [toggle]: true })).map(({ id }) => id),
+    ).toEqual([...base, ...conditional]);
+    expect(
+      colorFields(createHydratedWidgetForTest(type, { [toggle]: false })).map(({ id }) => id),
+    ).toEqual(base);
+  });
+
+  it("persists Usage warning and danger colors edited through the existing color fields", () => {
+    const usage = createHydratedWidgetForTest("openai-usage-bar", {
+      usageConditionalColors: true,
+      display: "short-only",
+    });
+    const fields = colorFields(usage);
+    const find = (id: ColorOptionField["id"]) => fields.find((field) => field.id === id)!;
+    applyColorOptionField(usage, find("warningFg"), 13);
+    applyColorDigit(usage, find("warningBgAnsi"), "2");
+    applyColorDigit(usage, find("warningBgAnsi"), "5");
+    applyColorDigit(usage, find("dangerFgAnsi"), "9");
+    applyColorOptionField(usage, find("dangerFgAnsi"), 1);
+    applyColorDigit(usage, find("dangerBgAnsi"), "4");
+    applyColorDigit(usage, find("dangerBgAnsi"), "8");
+    deleteColorDigit(usage, find("dangerBgAnsi"));
+    const entry = normalizeConfig({ lines: [[usage.toEntry()]] }).lines[0]![0]!;
+    const restored = registry.createWidget(entry.type, entry.options);
+    expect(restored.options).toMatchObject({
+      usageConditionalColors: true,
+      warningFg: "pi:accent",
+      warningBg: "ansi256:25",
+      dangerFg: "ansi256:10",
+      dangerBg: "ansi256:4",
+    });
+    const context = {
+      iconMode: "text" as const,
+      minimalist: false,
+      colorLevel: "ansi256" as const,
+      theme: taggedPiTheme,
+    };
+    const warningContext = {
+      ...context,
+      openAIUsage: { "5h": { leftPercent: 25, resetsAtMs: 1 } },
+    };
+    const dangerContext = { ...context, openAIUsage: { "5h": { leftPercent: 0, resetsAtMs: 1 } } };
+    expect(restored.render(warningContext)).toBe(
+      "\x1b[48;5;25m<accent>Usage [▓▓▓░░░░░░░]</accent>\x1b[49m",
+    );
+    expect(restored.render(dangerContext)).toBe(
+      "\x1b[48;5;4m\x1b[38;5;10mUsage [░░░░░░░░░░]\x1b[39m\x1b[49m",
+    );
   });
 
   it("documents color editor controls", () => {

@@ -22,6 +22,7 @@ const VALID_DEPENDENCIES = new Set<WidgetDependency>([
   "activeToolCount",
   "contextTokens",
   "contextMaxTokens",
+  "openAIUsage",
   "eventWidgets",
   "getExtensionStatuses",
 ]);
