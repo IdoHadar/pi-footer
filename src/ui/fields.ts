@@ -37,13 +37,9 @@ export function colorFields(widget?: Widget): ColorOptionField[] {
     { id: "fgAnsi", label: "Custom ANSI256 foreground", kind: "ansi" },
     { id: "bgAnsi", label: "Custom ANSI256 background", kind: "ansi" },
   ];
-  if (
-    widget &&
-    registry
-      .spec(widget.type)
-      .properties.find((property) => property.id === "contextConditionalColors") &&
-    widget.options.contextConditionalColors
-  ) {
+  const warningFg =
+    widget && registry.spec(widget.type).properties.find((property) => property.id === "warningFg");
+  if (widget && warningFg && isMetadataPropertyVisible(warningFg, widget.options)) {
     fields.push(
       { id: "warningFg", label: "Warning foreground", kind: "color" },
       { id: "warningBg", label: "Warning background", kind: "color" },
