@@ -42,6 +42,7 @@ async function setup(
     widgetEnabled?: boolean;
     hasUI?: boolean;
     widgetPresent?: boolean;
+    showResetCountdown?: boolean;
   } = {},
 ) {
   const config = normalizeConfig({
@@ -54,7 +55,7 @@ async function setup(
         {
           type: options.widgetPresent === false ? "model" : "openai-usage-bar",
           enabled: options.widgetEnabled ?? true,
-          options: { display: "short" },
+          options: { display: "short", showResetCountdown: options.showResetCountdown ?? false },
         },
       ],
     ],
@@ -149,6 +150,23 @@ afterEach(async () => {
 });
 
 describe("OpenAI allowance footer lifecycle", () => {
+  it("redraws identical fresh polls so the enabled countdown advances", async () => {
+    const app = await setup({ showResetCountdown: true });
+    await app.emit("session_start");
+    await vi.advanceTimersByTimeAsync(0);
+    expect(app.current()?.render(100)).toEqual(["Usage [▓▓▓▓▓▓▓▓▓▓] 97% 1h"]);
+    app.redraw.mockClear();
+    await vi.advanceTimersByTimeAsync(60_000);
+    expect(app.fetch).toHaveBeenCalledTimes(2);
+    expect(app.redraw).toHaveBeenCalled();
+    expect(app.current()?.render(100)).toEqual(["Usage [▓▓▓▓▓▓▓▓▓▓] 97% 59m"]);
+    app.redraw.mockClear();
+    await vi.advanceTimersByTimeAsync(60_000);
+    expect(app.fetch).toHaveBeenCalledTimes(3);
+    expect(app.redraw).toHaveBeenCalled();
+    expect(app.current()?.render(100)).toEqual(["Usage [▓▓▓▓▓▓▓▓▓▓] 97% 58m"]);
+  });
+
   it("starts outside rendering, redraws new data, and does not fetch on render", async () => {
     const app = await setup();
     await app.emit("session_start");

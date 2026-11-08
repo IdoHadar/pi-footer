@@ -1,6 +1,10 @@
-import { describe, expect, it } from "vitest";
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
-import { DEFAULT_CONFIG, normalizeConfig } from "../../../src/config.js";
+import { afterEach, describe, expect, it, vi } from "vitest";
+
+import { DEFAULT_CONFIG, loadConfig, normalizeConfig, saveConfig } from "../../../src/config.js";
 import { hasEnabledOpenAIUsageWidget } from "../../../src/openai-usage.js";
 import type { WidgetOptions } from "../../../src/types.js";
 import {
@@ -32,7 +36,130 @@ function ctx(
   };
 }
 
+afterEach(() => {
+  vi.useRealTimers();
+});
+
 describe("OpenAI Usage Bar", () => {
+  it.each([
+    [154 * 3_600_000, "6d 10h"],
+    [24 * 3_600_000, "1d 0h"],
+    [24 * 3_600_000 - 1, "23h"],
+    [3_600_000, "1h"],
+    [3_600_000 - 1, "59m"],
+    [60_000, "1m"],
+    [59_999, "<1m"],
+    [1, "<1m"],
+    [0, "0m"],
+    [-1, "0m"],
+  ])("renders the countdown at %s ms as %s", (remaining, expected) => {
+    vi.useFakeTimers();
+    const now = Date.UTC(2026, 6, 19);
+    vi.setSystemTime(now);
+    expect(
+      widget({ showResetCountdown: true, display: "short" }).render(
+        ctx({ openAIUsage: { weekly: { leftPercent: 50, resetsAtMs: now + remaining } } }),
+      ),
+    ).toBe(`Usage [▓▓▓▓▓░░░░░] 50% ${expected}`);
+  });
+
+  it.each(["default", "short", "medium", "short-only"])(
+    "preserves %s mode, raw output, and custom icons with countdown enabled",
+    (display) => {
+      vi.useFakeTimers();
+      vi.setSystemTime(0);
+      const context = ctx({
+        openAIUsage: { "5h": { leftPercent: 25, resetsAtMs: 3_600_000 } },
+      });
+      const suffix = display === "short-only" ? "" : " 1h";
+      expect(widget({ display, showResetCountdown: true }).render(context)).toBe(
+        `${widget({ display }).render(context)}${suffix}`,
+      );
+      expect(widget({ display, raw: true, showResetCountdown: true }).render(context)).toBe(
+        `${widget({ display, raw: true }).render(context)}${suffix}`,
+      );
+      expect(widget({ display, icon: "Quota", showResetCountdown: true }).render(context)).toBe(
+        `${widget({ display, icon: "Quota" }).render(context)}${suffix}`,
+      );
+    },
+  );
+
+  it.each([
+    ["auto", true, "Usage [▓▓▓░░░░░░░] 25% 1h"],
+    ["5h", true, "Usage [▓▓▓░░░░░░░] 25% 1h"],
+    ["weekly", true, "Usage [▓▓▓▓▓░░░░░] 50% 6d 10h"],
+    ["auto", false, "Usage [▓▓▓▓▓░░░░░] 50% 6d 10h"],
+    ["5h", false, undefined],
+  ])("uses the selected %s deadline with 5h present %s", (usageWindow, fiveHour, expected) => {
+    vi.useFakeTimers();
+    vi.setSystemTime(0);
+    expect(
+      widget({ display: "short", usageWindow, showResetCountdown: true }).render(
+        ctx({
+          openAIUsage: {
+            ...(fiveHour ? { "5h": { leftPercent: 25, resetsAtMs: 3_600_000 } } : {}),
+            weekly: { leftPercent: 50, resetsAtMs: 154 * 3_600_000 },
+          },
+        }),
+      ),
+    ).toBe(expected);
+  });
+
+  it.each([undefined, {}])("hides missing allowance with countdown enabled", (openAIUsage) => {
+    expect(widget({ showResetCountdown: true }).render(ctx({ openAIUsage }))).toBeUndefined();
+  });
+
+  it.each([
+    [25, 33, 45],
+    [5, 31, 46],
+    [50, 36, 44],
+  ])("keeps countdown within the selected colors at %s remaining", (leftPercent, fg, bg) => {
+    vi.useFakeTimers();
+    vi.setSystemTime(0);
+    const context = ctx({
+      colorLevel: "ansi16",
+      openAIUsage: { "5h": { leftPercent, resetsAtMs: 3_600_000 } },
+    });
+    const bar = widget({
+      display: "short",
+      showResetCountdown: true,
+      usageConditionalColors: true,
+      fg: "cyan",
+      bg: "blue",
+      bold: true,
+      warningBg: "magenta",
+      dangerBg: "cyan",
+    });
+    const output = bar.render(context);
+    expect(output).toMatch(new RegExp(`^\\x1b\\[1m\\x1b\\[${bg}m\\x1b\\[${fg}mUsage `));
+    expect(output).toContain(` ${leftPercent}% 1h\x1b[39m\x1b[49m\x1b[22m`);
+  });
+
+  it("normalizes, toggles, saves and restores countdown through metadata", async () => {
+    const bar = widget();
+    expect(bar.options.showResetCountdown).toBe(false);
+    expect(widget({ showResetCountdown: "true" }).options.showResetCountdown).toBe(false);
+    const toggle = fieldsForWidget(bar).find(({ id }) => id === "showResetCountdown")!;
+    expect(toggle).toMatchObject({ label: "Show reset countdown", kind: "boolean" });
+    expect(applyOptionField(bar, toggle, 1)).toBe("changed");
+    expect(bar.options.showResetCountdown).toBe(true);
+    expect(formatWidgetOptions(bar)).toContain("reset-countdown");
+    expect(formatWidgetColorOptions(bar)).not.toContain("reset-countdown");
+    expect(colorFields(bar).map(({ id }) => id)).not.toContain("showResetCountdown");
+    const directory = await mkdtemp(join(tmpdir(), "pi-footer-countdown-"));
+    try {
+      const path = join(directory, "config.json");
+      const config = normalizeConfig({ lines: [[registry.createEntry(bar.type, bar.options)]] });
+      await saveConfig(config, path);
+      const restored = await loadConfig(path);
+      expect(restored.lines[0]?.[0]?.options.showResetCountdown).toBe(true);
+      expect(applyOptionField(bar, toggle, 1)).toBe("changed");
+      expect(bar.options.showResetCountdown).toBe(false);
+      expect(formatWidgetOptions(bar)).not.toContain("reset-countdown");
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
+  });
   it.each([
     ["default", "[████████░░░░░░░░░░░░░░░░░░░░░░░░] 25%", "[████████████████░░░░░░░░░░░░░░░░] 50%"],
     ["short", "[▓▓▓░░░░░░░] 25%", "[▓▓▓▓▓░░░░░] 50%"],
@@ -114,6 +241,7 @@ describe("OpenAI Usage Bar", () => {
       "icon",
       "usageWindow",
       "display",
+      "showResetCountdown",
       "usageConditionalColors",
     ]);
     expect(formatWidgetOptions(widget({ usageWindow: "weekly", display: "short" }))).toContain(

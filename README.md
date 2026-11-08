@@ -193,13 +193,15 @@ The **Value example** column shows the widget value before labels/icons and colo
 | `Context %` | Used context percentage. | Conditional colors. | `25%` |
 | `Context Remaining` | Remaining context percentage. | Conditional colors. | `75%` |
 | `Context Bar` | Progress bar plus context usage. | Display: default, short, short-only, medium; token format; conditional colors. | `[████████░░░░░░░░░░░░░░░░░░░░░░░░] 50k/200k (25%)` |
-| `OpenAI Usage Bar` | OpenAI subscription allowance left, not context capacity or API credit. | Window: available, 5h, weekly; display: default, short, short-only, medium; conditional colors. | `[▓▓▓▓▓▓▓░░░] 73%` |
+| `OpenAI Usage Bar` | OpenAI subscription allowance left, not context capacity or API credit. | Window: available, 5h, weekly; display: default, short, short-only, medium; show reset countdown; conditional colors. | `[▓▓▓▓▓▓▓░░░] 73%` |
 | `Session Cost` | Estimated session cost. | Cost format, show subscription marker. | `$0.1234` |
 | `Input Speed` | Average input tokens per minute across transcript span. | Token format, hide when zero. | `20.1k/min` |
 | `Output Speed` | Average output tokens per minute across transcript span. | Token format, hide when zero. | `1.1k/min` |
 | `Total Speed` | Average total tokens per minute across transcript span. | Token format, hide when zero. | `21.2k/min` |
 
 Add **OpenAI Usage Bar** from **Tokens** in `/footer` to enable it. **Available window** is the default and prefers 5h, then weekly. Add two instances with explicit windows to show both.
+
+**Show reset countdown** is off by default. Enable it in the widget options to append the selected window's time until reset, such as `50% 6d 10h`. Below one day it shows hours, then minutes below one hour, or `<1m` below one minute. **Short bar only** stays bar-only.
 
 **Conditional colors** is off by default. Enable it in the widget options to edit remaining-allowance thresholds. Configure warning and danger foreground and background colors under **Edit colors**. Defaults are yellow at or below 30% remaining and red at or below 10%, with default backgrounds. Thresholds use the unrounded percentage, and danger takes precedence.
 

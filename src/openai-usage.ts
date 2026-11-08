@@ -69,7 +69,7 @@ export class OpenAIUsageMonitor {
     clearTimeout(binding.expiryTimer);
     const previous = this.data?.usage;
     this.data = usage ? { usage, receivedAt } : undefined;
-    if (JSON.stringify(previous) !== JSON.stringify(usage)) binding.changed();
+    if (usage || JSON.stringify(previous) !== JSON.stringify(usage)) binding.changed();
     if (usage) {
       const expiresAt = Math.min(
         receivedAt + FRESHNESS_MS,

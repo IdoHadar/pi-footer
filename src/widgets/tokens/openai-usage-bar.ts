@@ -15,6 +15,16 @@ const MODES = {
   medium: { label: "Medium bar", width: 16, filled: "█", bracketed: true, showUsage: true },
 } as const;
 
+function formatResetCountdown(resetsAtMs: number, nowMs: number): string {
+  const remainingMs = Math.max(0, resetsAtMs - nowMs);
+  const hours = Math.floor(remainingMs / 3_600_000);
+  if (hours >= 24) return `${Math.floor(hours / 24)}d ${hours % 24}h`;
+  if (hours >= 1) return `${hours}h`;
+  const minutes = Math.floor(remainingMs / 60_000);
+  if (minutes >= 1) return `${minutes}m`;
+  return remainingMs > 0 ? "<1m" : "0m";
+}
+
 export const OpenAIUsageBarWidget = defineWidget({
   type: "openai-usage-bar",
   label: "OpenAI Usage Bar",
@@ -53,6 +63,19 @@ export const OpenAIUsageBarWidget = defineWidget({
         })),
         showInWidgets: true,
         listProperty: "display",
+      },
+    },
+    {
+      id: "showResetCountdown",
+      label: "Show reset countdown",
+      kind: "boolean",
+      description: "Show time until the selected subscription allowance resets",
+      default: false,
+      options: {
+        label: "reset-countdown",
+        showInWidgets: true,
+        showInColors: false,
+        listProperty: "",
       },
     },
     {
@@ -152,6 +175,13 @@ export const OpenAIUsageBarWidget = defineWidget({
         );
       }
     }
-    return renderWidget(mode.showUsage ? `${bar} ${Math.round(window.leftPercent)}%` : bar, colors);
+    const countdown =
+      options.showResetCountdown && mode.showUsage
+        ? ` ${formatResetCountdown(window.resetsAtMs, Date.now())}`
+        : "";
+    return renderWidget(
+      mode.showUsage ? `${bar} ${Math.round(window.leftPercent)}%${countdown}` : bar,
+      colors,
+    );
   },
 });
