@@ -193,10 +193,15 @@ The **Value example** column shows the widget value before labels/icons and colo
 | `Context %` | Used context percentage. | Conditional colors. | `25%` |
 | `Context Remaining` | Remaining context percentage. | Conditional colors. | `75%` |
 | `Context Bar` | Progress bar plus context usage. | Display: default, short, short-only, medium; token format; conditional colors. | `[████████░░░░░░░░░░░░░░░░░░░░░░░░] 50k/200k (25%)` |
+| `OpenAI Usage Bar` | OpenAI subscription allowance left, not context capacity or API credit. | Window: available, 5h, weekly; display: default, short, short-only, medium. | `▓▓▓▓▓▓▓░░░ 5h 73% left` |
 | `Session Cost` | Estimated session cost. | Cost format, show subscription marker. | `$0.1234` |
 | `Input Speed` | Average input tokens per minute across transcript span. | Token format, hide when zero. | `20.1k/min` |
 | `Output Speed` | Average output tokens per minute across transcript span. | Token format, hide when zero. | `1.1k/min` |
 | `Total Speed` | Average total tokens per minute across transcript span. | Token format, hide when zero. | `21.2k/min` |
+
+Add **OpenAI Usage Bar** from **Tokens** in `/footer` to enable it. **Available window** is the default and prefers 5h, then weekly. Add two instances with explicit windows to show both.
+
+Only the selected `openai-codex` provider with OAuth is supported. The widget polls an internal ChatGPT endpoint every 60 seconds while the footer is active. Unavailable, failed, or expired data hides the widget; known zero remains visible. Account changes appear on the next poll. The endpoint can change without notice.
 
 ### Session widgets
 

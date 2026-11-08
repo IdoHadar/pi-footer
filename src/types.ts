@@ -1,5 +1,6 @@
 import type { ColorLevel, ColorName } from "./colors.js";
 import type { ExtensionStatusRowConfig } from "./extension-statuses.js";
+import type { OpenAIUsage } from "./openai-usage.js";
 import type { Preset } from "./presets.js";
 import type { SeparatorStyle } from "./separators.js";
 import type { WidgetType } from "./widgets/registry.js";
@@ -116,6 +117,7 @@ export interface StatuslineData {
   usingSubscription: boolean;
   contextTokens: number | undefined;
   contextMaxTokens: number | undefined;
+  openAIUsage?: OpenAIUsage | undefined;
   metrics: SessionMetrics;
   turnMetrics: TurnMetrics;
   eventWidgets: ReadonlyMap<string, string>;

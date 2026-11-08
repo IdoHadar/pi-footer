@@ -52,6 +52,7 @@ import { ContextWidget } from "./tokens/context.js";
 import { CostWidget } from "./tokens/cost.js";
 import { InputSpeedWidget } from "./tokens/input-speed.js";
 import { InputTokensWidget } from "./tokens/input-tokens.js";
+import { OpenAIUsageBarWidget } from "./tokens/openai-usage-bar.js";
 import { OutputSpeedWidget } from "./tokens/output-speed.js";
 import { OutputTokensWidget } from "./tokens/output-tokens.js";
 import { TokensWidget } from "./tokens/tokens.js";
@@ -102,6 +103,7 @@ const WIDGETS = [
   GitUnstagedWidget,
   GitUntrackedWidget,
   ContextBarWidget,
+  OpenAIUsageBarWidget,
   ContextLengthWidget,
   ContextWidget,
   ContextRemainingWidget,
